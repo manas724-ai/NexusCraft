@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NexusCraft — Browser Voxel World | Aussi-Nexus Group</title>
+<meta name="description" content="NexusCraft is a fully browser-based voxel world game. Build, mine, and explore infinite worlds — no download, no install. Play free or go Pro."/>
+<meta property="og:title" content="NexusCraft — Browser Voxel World"/>
+<meta property="og:description" content="Mine. Build. Explore. Infinite voxel worlds in your browser."/>
+<meta property="og:type" content="website"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+:root {
+  --purple:#7c3aed; --purple-l:#a855f7; --purple-d:#5b21b6;
+  --purple-pale:#f5f0ff; --purple-mid:#ede9fe;
+  --stone:#6b7280; --dirt:#92400e; --grass:#16a34a;
+  --gold:#d97706; --diamond:#0891b2;
+  --bg:#fafafa; --white:#fff; --text:#111827; --muted:#6b7280;
+  --border:#e5e7eb;
+  --radius:12px;
+}
+
+body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; overflow-x:hidden; }
+
+/* ---- NAV ---- */
+nav {
+  background:white; border-bottom:1px solid var(--border);
+  padding:0 2rem; height:64px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 1px 6px rgba(0,0,0,0.05);
+}
+.nav-logo {
+  font-family:'Space Mono',monospace; font-weight:700; font-size:1.25rem;
+  color:var(--purple); text-decoration:none; letter-spacing:-0.5px;
+}
+.nav-logo span { color:var(--text); }
+.nav-links { display:flex; gap:2rem; list-style:none; }
+.nav-links a { text-decoration:none; color:var(--muted); font-size:0.875rem; font-weight:500; transition:color 0.2s; }
+.nav-links a:hover { color:var(--purple); }
+.nav-cta {
+  background:var(--purple); color:white; padding:0.5rem 1.25rem;
+  border-radius:8px; text-decoration:none; font-weight:600; font-size:0.875rem;
+  transition:background 0.2s;
+}
+.nav-cta:hover { background:var(--purple-d); }
+
+/* ---- HERO ---- */
+.hero {
+  min-height:92vh; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center;
+  padding:5rem 2rem 4rem;
+  background: white;
+  position:relative; overflow:hidden;
+}
+
+/* Voxel grid background pattern */
+.hero::before {
+  content:'';
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+
+.hero-chip {
+  display:inline-flex; align-items:center; gap:0.5rem;
+  background:var(--purple-mid); color:var(--purple);
+  border:1px solid rgba(124,58,237,0.25);
+  border-radius:100px; padding:0.35rem 1rem;
+  font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  margin-bottom:2rem;
+}
+.chip-dot { width:6px; height:6px; background:var(--purple); border-radius:50%; animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.hero h1 {
+  font-family:'Space Mono',monospace;
+  font-size:clamp(2.8rem,8vw,6rem);
+  font-weight:700; line-height:1.05;
+  letter-spacing:-2px; margin-bottom:1.5rem;
+  color:var(--text);
+}
+.hero h1 em { color:var(--purple); font-style:normal; }
+
+.hero-sub {
+  font-size:clamp(1rem,2.5vw,1.25rem); color:var(--muted);
+  max-width:560px; margin:0 auto 2.5rem; font-weight:400; line-height:1.7;
+}
+
+.hero-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+.btn-primary {
+  background:var(--purple); color:white;
+  padding:0.9rem 2.5rem; border-radius:10px;
+  font-family:'Space Grotesk',sans-serif; font-size:1rem; font-weight:700;
+  text-decoration:none; border:none; cursor:pointer;
+  transition:all 0.2s; display:inline-flex; align-items:center; gap:0.5rem;
+}
+.btn-primary:hover { background:var(--purple-d); transform:translateY(-1px); box-shadow:0 8px 24px rgba(124,58,237,0.25); }
+.btn-outline {
+  background:white; color:var(--purple);
+  padding:0.9rem 2.5rem; border-radius:10px;
+  font-family:'Space Grotesk',sans-serif; font-size:1rem; font-weight:700;
+  text-decoration:none; border:2px solid var(--purple);
+  transition:all 0.2s; display:inline-flex; align-items:center; gap:0.5rem;
+}
+.btn-outline:hover { background:var(--purple-pale); }
+
+/* VOXEL DEMO PREVIEW */
+.voxel-preview {
+  margin:4rem auto 0; max-width:720px; width:100%;
+  border-radius:16px; border:2px solid var(--border);
+  overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.1);
+  aspect-ratio:16/9; position:relative; background:#1a1a2e;
+}
+.voxel-preview-inner {
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:1rem;
+  background:linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+}
+/* ASCII voxel world visualization */
+.voxel-scene {
+  font-family:'Space Mono',monospace; font-size:clamp(8px,1.2vw,13px);
+  line-height:1.2; color:#a78bfa; letter-spacing:1px;
+  text-shadow:0 0 8px rgba(167,139,250,0.5);
+  padding:1rem;
+}
+.play-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.35); cursor:pointer; transition:background 0.2s;
+}
+.play-overlay:hover { background:rgba(0,0,0,0.2); }
+.play-btn {
+  width:72px; height:72px; background:rgba(124,58,237,0.9);
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:2rem; box-shadow:0 0 30px rgba(124,58,237,0.5);
+  transition:transform 0.2s;
+}
+.play-overlay:hover .play-btn { transform:scale(1.1); }
+
+/* ---- SECTIONS ---- */
+section { padding:5rem 2rem; }
+.container { max-width:1100px; margin:0 auto; }
+
+.section-label {
+  font-family:'Space Mono',monospace; font-size:0.7rem;
+  font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--purple); margin-bottom:0.75rem;
+}
+.section-title {
+  font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700;
+  line-height:1.15; letter-spacing:-0.5px; margin-bottom:1rem;
+}
+.section-sub { color:var(--muted); font-size:1rem; max-width:520px; line-height:1.7; }
+
+/* ---- FEATURES ---- */
+.features-section { background:white; }
+.features-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1.5rem; margin-top:3rem;
+}
+.feature-card {
+  background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
+  padding:1.75rem; transition:all 0.2s;
+}
+.feature-card:hover { border-color:var(--purple); box-shadow:0 4px 20px rgba(124,58,237,0.08); transform:translateY(-2px); }
+.feature-icon {
+  width:44px; height:44px; border-radius:10px;
+  background:var(--purple-pale); display:flex; align-items:center;
+  justify-content:center; font-size:1.3rem; margin-bottom:1rem;
+}
+.feature-card h3 { font-size:1rem; font-weight:700; margin-bottom:0.5rem; }
+.feature-card p { font-size:0.875rem; color:var(--muted); line-height:1.7; }
+
+/* ---- BLOCK PALETTE ---- */
+.blocks-section { background:var(--purple-pale); }
+.block-grid {
+  display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:2rem;
+}
+.block-chip {
+  display:inline-flex; align-items:center; gap:0.5rem;
+  padding:0.5rem 1rem; border-radius:8px;
+  background:white; border:1px solid var(--border);
+  font-size:0.85rem; font-weight:600; color:var(--text);
+  transition:all 0.15s;
+}
+.block-chip:hover { border-color:var(--purple); transform:translateY(-1px); }
+.block-dot { width:16px; height:16px; border-radius:3px; }
+
+/* ---- PRICING ---- */
+.pricing-section { background:white; }
+.pricing-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1.5rem; margin-top:3rem; align-items:start;
+}
+.price-card {
+  background:var(--bg); border:1.5px solid var(--border);
+  border-radius:16px; padding:2rem; position:relative;
+  transition:all 0.2s;
+}
+.price-card:hover { box-shadow:0 8px 32px rgba(124,58,237,0.1); }
+.price-card.featured { border-color:var(--purple); background:white; box-shadow:0 8px 32px rgba(124,58,237,0.12); }
+.popular-badge {
+  position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+  background:var(--purple); color:white; font-size:0.7rem; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; padding:0.3rem 1rem;
+  border-radius:100px;
+}
+.plan-tier { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--purple); margin-bottom:0.5rem; }
+.plan-price { font-family:'Space Mono',monospace; font-size:2.8rem; font-weight:700; color:var(--text); line-height:1; }
+.plan-price sup { font-size:1.2rem; vertical-align:super; }
+.plan-price sub { font-size:0.9rem; color:var(--muted); font-weight:400; }
+.plan-desc { font-size:0.82rem; color:var(--muted); margin:0.5rem 0 1.5rem; }
+hr.plan-divider { border:none; border-top:1px solid var(--border); margin:1rem 0; }
+.plan-features { list-style:none; padding:0; margin-bottom:1.5rem; }
+.plan-features li {
+  display:flex; align-items:flex-start; gap:0.5rem;
+  font-size:0.875rem; color:#374151; padding:0.3rem 0;
+}
+.plan-features li::before { content:'✓'; color:var(--purple); font-weight:700; flex-shrink:0; }
+.plan-features li.no::before { content:'—'; color:#d1d5db; }
+.plan-features li.no { color:var(--muted); }
+.plan-btn {
+  display:block; width:100%; padding:0.8rem; border-radius:8px;
+  font-family:'Space Grotesk',sans-serif; font-size:0.9rem; font-weight:700;
+  cursor:pointer; text-align:center; text-decoration:none;
+  transition:all 0.2s; border:none;
+}
+.plan-btn.primary-btn { background:var(--purple); color:white; }
+.plan-btn.primary-btn:hover { background:var(--purple-d); }
+.plan-btn.outline-btn { background:white; color:var(--purple); border:1.5px solid var(--purple); }
+.plan-btn.outline-btn:hover { background:var(--purple-pale); }
+
+/* ---- TECH STACK ---- */
+.tech-section { background:var(--bg); border-top:1px solid var(--border); }
+.tech-pills { display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:2rem; }
+.tech-pill {
+  background:white; border:1px solid var(--border); border-radius:8px;
+  padding:0.5rem 1rem; font-size:0.82rem; font-weight:600; color:var(--text);
+  font-family:'Space Mono',monospace;
+}
+
+/* ---- LEGAL STRIP ---- */
+.legal-strip {
+  background:var(--purple-mid); border-top:1px solid rgba(124,58,237,0.15);
+  padding:2rem; text-align:center;
+}
+.legal-strip p { font-size:0.82rem; color:var(--purple-d); line-height:1.9; }
+.legal-strip strong { color:var(--purple); }
+.legal-strip a { color:var(--purple); text-decoration:none; font-weight:600; }
+.legal-strip a:hover { text-decoration:underline; }
+
+/* ---- FOOTER ---- */
+footer {
+  background:white; border-top:1px solid var(--border);
+  padding:3rem 2rem; text-align:center;
+}
+.footer-logo { font-family:'Space Mono',monospace; font-size:1.1rem; font-weight:700; color:var(--purple); margin-bottom:0.5rem; }
+.footer-sub { font-size:0.8rem; color:var(--muted); line-height:2; }
+.footer-links { display:flex; gap:1.5rem; justify-content:center; margin:1rem 0; flex-wrap:wrap; }
+.footer-links a { font-size:0.82rem; color:var(--muted); text-decoration:none; transition:color 0.2s; }
+.footer-links a:hover { color:var(--purple); }
+
+/* FREE BANNER */
+#free-banner {
+  position:fixed; top:0; left:0; width:100%; z-index:999999;
+  background:#dc2626; color:white; text-align:center;
+  padding:0.4rem; font-size:0.8rem; font-weight:700; letter-spacing:0.5px;
+}
+
+/* OWNER DOT */
+#owner-dot {
+  position:fixed; bottom:20px; left:20px; width:12px; height:12px;
+  border-radius:50%; background:rgba(124,58,237,0.3); cursor:pointer;
+  z-index:9999; transition:background 0.3s;
+}
+#owner-dot:hover { background:rgba(124,58,237,0.7); }
+#owner-modal {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+  z-index:99999; align-items:center; justify-content:center;
+}
+#owner-modal.show { display:flex; }
+#owner-box {
+  background:white; border-radius:16px; padding:2rem; width:300px;
+  text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.2);
+  border:1px solid var(--border);
+}
+#owner-box h3 { font-size:1rem; font-weight:700; margin-bottom:0.25rem; }
+#owner-box p { font-size:0.8rem; color:var(--muted); margin-bottom:1rem; }
+#owner-pw {
+  width:100%; padding:0.6rem; border:1.5px solid var(--border);
+  border-radius:8px; font-family:'Space Grotesk',sans-serif; font-size:0.875rem;
+  text-align:center; letter-spacing:2px; margin-bottom:0.75rem; outline:none;
+}
+#owner-pw:focus { border-color:var(--purple); }
+#owner-ok {
+  width:100%; padding:0.7rem; background:var(--purple); color:white;
+  border:none; border-radius:8px; font-family:'Space Grotesk',sans-serif;
+  font-weight:700; cursor:pointer;
+}
+#owner-ok:hover { background:var(--purple-d); }
+#owner-badge {
+  display:none; position:fixed; top:74px; right:16px;
+  background:var(--purple); color:white; font-size:0.7rem;
+  font-weight:700; padding:0.3rem 0.8rem; border-radius:100px; z-index:200;
+}
+body.owner #owner-badge { display:block; }
+body.owner #owner-dot { background:rgba(124,58,237,0.9); box-shadow:0 0 8px rgba(124,58,237,0.4); }
+
+@media(max-width:768px){
+  nav .nav-links { display:none; }
+  .hero h1 { letter-spacing:-1px; }
+  .pricing-grid { grid-template-columns:1fr; }
+  .hero-actions { flex-direction:column; align-items:center; }
+}
+</style>
+</head>
+<body>
+
+<!-- FREE BANNER -->
+<div id="free-banner">🎮 NexusCraft is FREE during early access — Limited time offer</div>
+<div style="height:32px"></div>
+
+<!-- OWNER BADGE -->
+<div id="owner-badge">⚡ Owner Mode</div>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="index.html">Nexus<span>Craft</span></a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#blocks">Blocks</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="legal.html">Legal</a></li>
+  </ul>
+  <a class="nav-cta" href="game.html">▶ Play Free</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-chip"><span class="chip-dot"></span>Now Live · v1.0</div>
+  <h1>Mine. Build.<br/><em>Own Your World.</em></h1>
+  <p class="hero-sub">NexusCraft is a fully browser-based voxel world. Infinite terrain, 16 block types, real physics — no download, no install, no plugins.</p>
+  <div class="hero-actions">
+    <a class="btn-primary" href="game.html">▶ Play Free Now</a>
+    <a class="btn-outline" href="#pricing">View Plans</a>
+  </div>
+
+  <!-- Visual voxel preview -->
+  <div class="voxel-preview">
+    <div class="voxel-preview-inner">
+      <div class="voxel-scene">
+████████████████████████████████████<br/>
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░<br/>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br/>
+<span style="color:#4ade80">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span><br/>
+<span style="color:#92400e">█████████████████████████████████████</span><br/>
+<span style="color:#6b7280">████████████████████████████████████</span><br/>
+<span style="color:#374151">████ 💎 ██████ ⛏️ █████ 🪨 ██████████</span>
+      </div>
+      <p style="color:rgba(167,139,250,0.7);font-size:0.82rem;font-family:'Space Mono',monospace;">NEXUSCRAFT ENGINE v1.0 · WebGL · Infinite World</p>
+    </div>
+    <a class="play-overlay" href="game.html">
+      <div class="play-btn">▶</div>
+    </a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-label">What You Get</div>
+    <div class="section-title">Everything a voxel world needs</div>
+    <p class="section-sub">Built from scratch with WebGL. No Unity, no Unreal — pure browser performance.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <h3>Infinite Procedural Terrain</h3>
+        <p>Multi-octave noise generation creates unique landscapes every session — plains, hills, mountains, and underground cave systems.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⛏️</div>
+        <h3>Mine & Place Blocks</h3>
+        <p>Left-click to mine any block in the world. Right-click to place from your hotbar. Real raycasting engine with face detection.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔮</div>
+        <h3>16 Block Types</h3>
+        <p>Grass, dirt, stone, sand, wood, leaves, brick, glass, coal ore, iron ore, gold ore, diamond, TNT, obsidian, snow, and water.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Real Physics Engine</h3>
+        <p>Full collision detection, gravity, jumping, and sprinting. Toggle fly mode for creative building without limits.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌲</div>
+        <h3>Biomes & Trees</h3>
+        <p>Procedurally generated forests, snow biomes, and desert regions. Trees grow naturally across the landscape.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖥️</div>
+        <h3>Zero Install</h3>
+        <p>Runs entirely in your browser via WebGL. Works on Chrome, Firefox, Edge, and Safari. No account required for free play.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BLOCKS -->
+<section class="blocks-section" id="blocks">
+  <div class="container">
+    <div class="section-label">Block Types</div>
+    <div class="section-title">16 blocks, one world</div>
+    <p class="section-sub">Every block type has unique color rendering and face shading. Mine rare ores deep underground.</p>
+    <div class="block-grid">
+      <div class="block-chip"><div class="block-dot" style="background:#3aa62e"></div>Grass</div>
+      <div class="block-chip"><div class="block-dot" style="background:#8c6135"></div>Dirt</div>
+      <div class="block-chip"><div class="block-dot" style="background:#808080"></div>Stone</div>
+      <div class="block-chip"><div class="block-dot" style="background:#ede08c"></div>Sand</div>
+      <div class="block-chip"><div class="block-dot" style="background:#855826"></div>Wood</div>
+      <div class="block-chip"><div class="block-dot" style="background:#267a14"></div>Leaves</div>
+      <div class="block-chip"><div class="block-dot" style="background:#2e7ad4"></div>Water</div>
+      <div class="block-chip"><div class="block-dot" style="background:#eaf1f9"></div>Snow</div>
+      <div class="block-chip"><div class="block-dot" style="background:#b34730"></div>Brick</div>
+      <div class="block-chip"><div class="block-dot" style="background:#d1ecf9"></div>Glass</div>
+      <div class="block-chip"><div class="block-dot" style="background:#2e2e2e"></div>Coal Ore</div>
+      <div class="block-chip"><div class="block-dot" style="background:#b8b8c0"></div>Iron Ore</div>
+      <div class="block-chip"><div class="block-dot" style="background:#f2d21e"></div>Gold Ore</div>
+      <div class="block-chip"><div class="block-dot" style="background:#2de0f2"></div>💎 Diamond</div>
+      <div class="block-chip"><div class="block-dot" style="background:#d92519"></div>TNT</div>
+      <div class="block-chip"><div class="block-dot" style="background:#0d0514"></div>Obsidian</div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <div class="section-label">Plans</div>
+    <div class="section-title">Start free. Go Pro when you're ready.</div>
+    <p class="section-sub">All prices in AUD, inclusive of GST. Cancel anytime.</p>
+
+    <div class="pricing-grid">
+      <!-- FREE -->
+      <div class="price-card">
+        <div class="plan-tier">Explorer</div>
+        <div class="plan-price"><sup>$</sup>0<sub>/mo</sub></div>
+        <div class="plan-desc">Play forever, no credit card</div>
+        <hr class="plan-divider"/>
+        <ul class="plan-features">
+          <li>Full voxel world access</li>
+          <li>All 16 block types</li>
+          <li>Infinite terrain generation</li>
+          <li>Fly mode & physics</li>
+          <li class="no">Save world to cloud</li>
+          <li class="no">Multiplayer (coming soon)</li>
+          <li class="no">Custom skins</li>
+        </ul>
+        <a class="plan-btn outline-btn" href="game.html">Play Free</a>
+      </div>
+
+      <!-- PRO -->
+      <div class="price-card featured">
+        <div class="popular-badge">Most Popular</div>
+        <div class="plan-tier">Crafter Pro</div>
+        <div class="plan-price"><sup>$</sup>9<sub>/mo</sub></div>
+        <div class="plan-desc">For builders who want more</div>
+        <hr class="plan-divider"/>
+        <ul class="plan-features">
+          <li>Everything in Explorer</li>
+          <li>Save worlds to cloud</li>
+          <li>10 saved world slots</li>
+          <li>Priority server access</li>
+          <li>Early feature access</li>
+          <li class="no">Multiplayer (coming soon)</li>
+          <li class="no">Custom skins</li>
+        </ul>
+        <a class="plan-btn primary-btn" href="#" onclick="alert('Stripe integration coming soon. Contact Aussi-Nexus Group to subscribe.')">Get Pro — $9/mo</a>
+      </div>
+
+      <!-- UNLIMITED -->
+      <div class="price-card">
+        <div class="plan-tier">Master Builder</div>
+        <div class="plan-price"><sup>$</sup>19<sub>/mo</sub></div>
+        <div class="plan-desc">Unlimited everything</div>
+        <hr class="plan-divider"/>
+        <ul class="plan-features">
+          <li>Everything in Pro</li>
+          <li>Unlimited world saves</li>
+          <li>Multiplayer access (soon)</li>
+          <li>Custom skins & textures</li>
+          <li>NexusCraft badge</li>
+          <li>Direct support</li>
+          <li>Early beta features</li>
+        </ul>
+        <a class="plan-btn outline-btn" href="#" onclick="alert('Contact Aussi-Nexus Group for Master Builder plan.')">Get Master — $19/mo</a>
+      </div>
+    </div>
+
+    <p style="text-align:center;font-size:0.8rem;color:var(--muted);margin-top:1.5rem;">
+      7-day money-back guarantee on paid plans · Secure payments via Stripe · ABN 76 947 108 181
+    </p>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section class="tech-section">
+  <div class="container">
+    <div class="section-label">Under the Hood</div>
+    <div class="section-title">Built with raw WebGL</div>
+    <p class="section-sub">No game engines, no frameworks — just high-performance browser technology.</p>
+    <div class="tech-pills">
+      <div class="tech-pill">WebGL 1.0</div>
+      <div class="tech-pill">GLSL Shaders</div>
+      <div class="tech-pill">Perlin Noise</div>
+      <div class="tech-pill">Chunk System</div>
+      <div class="tech-pill">Raycasting</div>
+      <div class="tech-pill">AABB Collisions</div>
+      <div class="tech-pill">Frustum Culling</div>
+      <div class="tech-pill">Face-only Rendering</div>
+      <div class="tech-pill">Vanilla JS</div>
+      <div class="tech-pill">Zero Dependencies</div>
+      <div class="tech-pill">Node.js Backend</div>
+      <div class="tech-pill">MySQL</div>
+      <div class="tech-pill">JWT Auth</div>
+      <div class="tech-pill">Stripe Payments</div>
+    </div>
+  </div>
+</section>
+
+<!-- LEGAL STRIP -->
+<div class="legal-strip">
+  <p>
+    <strong>NexusCraft</strong> is an original product of <strong>Aussi-Nexus Group</strong> (ABN 76 947 108 181), founded by Dr Manas Swain, MBBS, Grad MHP, MS in Human Services.<br/>
+    © 2026 Aussi-Nexus Group. All rights reserved. NexusCraft™ is a trademark of Aussi-Nexus Group. Unauthorised reproduction or redistribution is prohibited.<br/>
+    <a href="legal.html">Disclaimer</a> · <a href="legal.html#copyright">Copyright</a> · <a href="legal.html#legal">Terms of Service</a> · <a href="legal.html#privacy">Privacy Policy</a>
+  </p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">NexusCraft™</div>
+  <p class="footer-sub">A product of Aussi-Nexus Group · Queensland, Australia · ABN 76 947 108 181</p>
+  <div class="footer-links">
+    <a href="game.html">Play Now</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="legal.html">Legal</a>
+  </div>
+  <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;">© 2026 Aussi-Nexus Group. NexusCraft™ is not affiliated with Mojang Studios or Microsoft Corporation.</p>
+</footer>
+
+<!-- OWNER DOT -->
+<div id="owner-dot" onclick="document.getElementById('owner-modal').classList.add('show')"></div>
+<div id="owner-modal">
+  <div id="owner-box">
+    <h3>Owner Access</h3>
+    <p>Enter password to unlock admin controls</p>
+    <input type="password" id="owner-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')ownerCheck()"/>
+    <button id="owner-ok" onclick="ownerCheck()">Unlock</button>
+  </div>
+</div>
+
+<script>
+function ownerCheck(){
+  if(document.getElementById('owner-pw').value==='manas724'){
+    document.body.classList.add('owner');
+    document.getElementById('owner-modal').classList.remove('show');
+    document.getElementById('owner-pw').value='';
+  }
+}
+document.getElementById('owner-modal').addEventListener('click',function(e){
+  if(e.target===this) this.classList.remove('show');
+});
+</script>
+</body>
+</html>
